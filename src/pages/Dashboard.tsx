@@ -90,7 +90,7 @@ interface Project {
   steps: ProjectStep[];
 }
 
-interface Document {
+interface AppDocument {
   id: string;
   title: string;
   url: string;
@@ -121,7 +121,7 @@ interface Message {
 export default function Dashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<AppDocument[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -156,7 +156,7 @@ export default function Dashboard() {
         // Documents
         const qDocs = query(collection(db, "documents"), where("ownerUid", "==", uid), orderBy("createdAt", "desc"));
         unsubs.push(onSnapshot(qDocs, 
-          (snapshot) => setDocuments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Document))),
+          (snapshot) => setDocuments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppDocument))),
           (err) => handleFirestoreError(err, OperationType.LIST, "documents")
         ));
 

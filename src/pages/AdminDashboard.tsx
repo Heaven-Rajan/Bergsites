@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, 
   Plus, 
@@ -13,7 +13,8 @@ import {
   ChevronDown,
   ChevronUp,
   X,
-  Upload
+  Upload,
+  Lock
 } from 'lucide-react';
 import { 
   collection, 
@@ -49,7 +50,7 @@ interface Project {
   steps: ProjectStep[];
 }
 
-interface User {
+interface AppUser {
   uid: string;
   email: string;
   displayName: string;
@@ -62,7 +63,7 @@ interface Message {
   createdAt: any;
 }
 
-interface Document {
+interface AppDocument {
   id: string;
   title: string;
   url: string;
@@ -80,9 +81,9 @@ interface Asset {
 const AdminDashboard = () => {
   console.log("AdminDashboard rendering...");
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<AppDocument[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -165,7 +166,7 @@ const AdminDashboard = () => {
 
     const q = query(collection(db, 'documents'), where('ownerUid', '==', selectedUser.uid));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setDocuments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Document)));
+      setDocuments(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppDocument)));
     });
 
     return () => unsubscribe();
@@ -209,7 +210,7 @@ const AdminDashboard = () => {
       const snapshot = await getDocs(q);
       
       if (!snapshot.empty) {
-        const userData = snapshot.docs[0].data() as User;
+        const userData = snapshot.docs[0].data() as AppUser;
         setSelectedUser({ ...userData, uid: snapshot.docs[0].id });
         return;
       }
@@ -217,7 +218,7 @@ const AdminDashboard = () => {
       // 2. Try searching by direct Document ID (UID)
       const userDoc = await getDoc(doc(db, 'users', searchQuery));
       if (userDoc.exists()) {
-        const userData = userDoc.data() as User;
+        const userData = userDoc.data() as AppUser;
         setSelectedUser({ ...userData, uid: userDoc.id });
         return;
       }
@@ -226,7 +227,7 @@ const AdminDashboard = () => {
       // This allows managing users who exist in Auth but don't have a Firestore doc yet
       if (searchQuery.includes('@') || searchQuery.length >= 20) {
         const isEmail = searchQuery.includes('@');
-        const newUser: User = {
+        const newUser: AppUser = {
           uid: isEmail ? '' : searchQuery, // We'll need to be careful here
           email: isEmail ? searchQuery : '',
           displayName: isEmail ? searchQuery.split('@')[0] : 'Kunde (' + searchQuery.substring(0, 5) + '...)'
