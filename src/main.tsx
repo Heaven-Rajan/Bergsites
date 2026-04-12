@@ -22,6 +22,7 @@ import FAQ from './pages/FAQ';
 import Contact from './pages/Contact';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import Legal from './pages/Legal';
 import Privacy from './pages/Privacy';
 import Selbstcheck from './pages/Selbstcheck';
@@ -38,7 +39,7 @@ function ScrollToTop() {
 
 function App() {
   const location = useLocation();
-  const isDashboard = location.pathname === '/dashboard';
+  const isDashboard = location.pathname === '/dashboard' || location.pathname === '/admindashboard';
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -63,6 +64,7 @@ function App() {
           <Route path="/kontakt" element={<Contact />} />
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/admindashboard" element={<AdminDashboard />} />
           <Route path="/selbstcheck" element={<Selbstcheck />} />
           <Route path="/impressum" element={<Legal />} />
           <Route path="/datenschutz" element={<Privacy />} />

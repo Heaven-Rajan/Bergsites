@@ -66,6 +66,17 @@ export default function WhyUs() {
           </motion.p>
 
           <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="flex flex-wrap justify-center gap-4 mb-12"
+          >
+            <Button nativeButton={false} render={<Link to="/admindashboard" />} size="lg" variant="outline" className="rounded-full px-8 border-primary/20 hover:bg-primary/5 text-primary font-bold">
+              Admin Dashboard (Temporär)
+            </Button>
+          </motion.div>
+
+          <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3 }}

@@ -172,6 +172,11 @@ export default function Header() {
 
             {user ? (
               <div className="flex items-center gap-4">
+                {user.email === 'galaxiegameri@gmail.com' && (
+                  <Button nativeButton={false} render={<Link to="/admindashboard" />} variant="outline" className="rounded-full px-6 font-bold border-primary/30 text-primary">
+                    Admin
+                  </Button>
+                )}
                 <Button nativeButton={false} render={<Link to="/dashboard" />} className={`rounded-full px-6 font-bold ${isAIPage ? 'bg-primary purple-glow' : ''}`}>
                   Dashboard
                 </Button>
