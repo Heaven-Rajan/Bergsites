@@ -28,8 +28,7 @@
             "type": "object",
             "properties": {
               "label": { "type": "string" },
-              "completed": { "type": "boolean" },
-              "active": { "type": "boolean" }
+              "status": { "type": "string", "enum": ["not-started", "in-progress", "completed"] }
             }
           }
         },

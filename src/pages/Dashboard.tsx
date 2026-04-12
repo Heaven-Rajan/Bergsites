@@ -79,8 +79,7 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 
 interface ProjectStep {
   label: string;
-  completed: boolean;
-  active: boolean;
+  status: 'not-started' | 'in-progress' | 'completed';
 }
 
 interface Project {
@@ -263,7 +262,7 @@ export default function Dashboard() {
               chatSection?.scrollIntoView({ behavior: 'smooth' });
             }}
           >
-            Zum Assistent <ChevronRight size={18} />
+            Zum Ansprechpartner <ChevronRight size={18} />
           </Button>
         </div>
       </header>
@@ -274,7 +273,7 @@ export default function Dashboard() {
           {/* Left Column - 7/12 */}
           <div className="lg:col-span-7 space-y-12">
             
-            {/* Main Status Card */}
+            {/* Milestone Status Card */}
             <section>
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
@@ -283,17 +282,17 @@ export default function Dashboard() {
               >
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-8">
-                    <h2 className="text-xl font-bold">Assistent</h2>
+                    <h2 className="text-xl font-bold">Meilenstein Status</h2>
                     <span className="text-xs font-black uppercase tracking-widest text-white/40 bg-white/5 px-3 py-1 rounded-full border border-white/10">
                       Projekt ID: {activeProject?.id.slice(0, 8) || "---"}
                     </span>
                   </div>
                   
                   <p className="text-lg text-white/80 leading-relaxed mb-12 max-w-md">
-                    {activeProject?.description || "Deine Unterlagen sind versandt und müssen unterschrieben werden. Voraussichtlich werden sie in Kürze zugestellt."}
+                    {activeProject?.description || "Hier siehst du den aktuellen Fortschritt deines Projekts. Wir halten dich über jeden Schritt auf dem Laufenden."}
                   </p>
                   
-                  {/* Overlapping Status Windows (Sketch implementation) */}
+                  {/* Overlapping Status Windows */}
                   <div className="relative mb-12 py-4">
                     {/* The Line */}
                     <div className="absolute top-1/2 left-0 right-0 h-1 bg-white/10 -translate-y-1/2 rounded-full" />
@@ -301,44 +300,55 @@ export default function Dashboard() {
                     {/* The Steps */}
                     <div className="relative flex justify-between items-center">
                       {(activeProject?.steps || [
-                        { label: "Start", completed: true, active: false },
-                        { label: "Prüfung", completed: true, active: false },
-                        { label: "Versand", completed: false, active: true },
-                        { label: "Abschluss", completed: false, active: false }
-                      ]).map((step, idx) => (
-                        <div key={idx} className="relative flex flex-col items-center group">
-                          {/* The Circle */}
-                          <motion.div 
-                            initial={false}
-                            animate={{ 
-                              scale: step.active ? 1.2 : 1,
-                              backgroundColor: step.completed ? "#ffffff" : step.active ? "var(--color-primary)" : "#495057"
-                            }}
-                            className={`w-10 h-10 rounded-full border-4 border-[#343a40] flex items-center justify-center transition-all z-10 shadow-lg ${step.active ? 'ring-4 ring-primary/30' : ''}`}
-                          >
-                            {step.completed ? (
-                              <CheckCircle2 size={18} className="text-[#343a40]" />
-                            ) : (
-                              <span className={`text-xs font-bold ${step.active ? 'text-white' : 'text-white/40'}`}>
-                                {idx + 1}
-                              </span>
-                            )}
-                          </motion.div>
-                          
-                          {/* The Label */}
-                          <div className={`absolute -bottom-8 whitespace-nowrap text-[10px] font-black uppercase tracking-widest transition-colors ${step.active ? 'text-white' : 'text-white/40'}`}>
-                            {step.label}
-                          </div>
+                        { label: "Konzept", status: "completed" },
+                        { label: "Design", status: "in-progress" },
+                        { label: "Entwicklung", status: "not-started" },
+                        { label: "Launch", status: "not-started" }
+                      ]).map((step, idx) => {
+                        const getStatusColor = (status: string) => {
+                          switch(status) {
+                            case 'completed': return '#22c55e'; // Green
+                            case 'in-progress': return '#eab308'; // Yellow
+                            case 'not-started': return '#ef4444'; // Red
+                            default: return '#495057';
+                          }
+                        };
 
-                          {/* Overlap Effect (Visual hint for the sketch) */}
-                          {step.active && (
+                        return (
+                          <div key={idx} className="relative flex flex-col items-center group">
+                            {/* The Circle */}
                             <motion.div 
-                              layoutId="active-glow"
-                              className="absolute inset-0 bg-primary/40 blur-xl rounded-full -z-10"
-                            />
-                          )}
-                        </div>
-                      ))}
+                              initial={false}
+                              animate={{ 
+                                scale: step.status === 'in-progress' ? 1.2 : 1,
+                                backgroundColor: getStatusColor(step.status)
+                              }}
+                              className={`w-10 h-10 rounded-full border-4 border-[#343a40] flex items-center justify-center transition-all z-10 shadow-lg ${step.status === 'in-progress' ? 'ring-4 ring-yellow-500/30' : ''}`}
+                            >
+                              {step.status === 'completed' ? (
+                                <CheckCircle2 size={18} className="text-white" />
+                              ) : (
+                                <span className="text-xs font-bold text-white">
+                                  {idx + 1}
+                                </span>
+                              )}
+                            </motion.div>
+                            
+                            {/* The Label */}
+                            <div className={`absolute -bottom-8 whitespace-nowrap text-[10px] font-black uppercase tracking-widest transition-colors ${step.status !== 'not-started' ? 'text-white' : 'text-white/40'}`}>
+                              {step.label}
+                            </div>
+
+                            {/* Glow Effect for active step */}
+                            {step.status === 'in-progress' && (
+                              <motion.div 
+                                layoutId="active-glow"
+                                className="absolute inset-0 bg-yellow-500/20 blur-xl rounded-full -z-10"
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                   
@@ -346,11 +356,13 @@ export default function Dashboard() {
                   <div className="space-y-4 pt-4 border-t border-white/5">
                     <div className="flex justify-between items-end">
                       <div className="space-y-1">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Fortschritt</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white/40">Gesamtfortschritt</span>
                         <div className="text-2xl font-black">{Math.round(progress)}%</div>
                       </div>
                       <span className="text-xs font-bold uppercase tracking-widest text-white/60 flex items-center gap-2 mb-1">
-                        <div className="w-2 h-2 bg-primary rounded-full animate-pulse" /> {activeProject?.status || "In Bearbeitung"}
+                        <div className={`w-2 h-2 rounded-full animate-pulse ${
+                          activeProject?.status === 'Abgeschlossen' ? 'bg-green-500' : 'bg-yellow-500'
+                        }`} /> {activeProject?.status || "In Bearbeitung"}
                       </span>
                     </div>
                   </div>
@@ -404,15 +416,8 @@ export default function Dashboard() {
               </div>
             </section>
 
-            {/* Settings & Logout */}
-            <section className="pt-12 border-t border-[#e9ecef] flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-lg mb-4">Einstellungen</h3>
-                <button className="flex items-center gap-3 text-muted-foreground hover:text-primary transition-colors group">
-                  <span className="text-sm font-medium">E-Mail ändern</span>
-                  <Plus size={16} className="group-hover:rotate-90 transition-transform" />
-                </button>
-              </div>
+            {/* Logout */}
+            <section className="pt-12 border-t border-[#e9ecef] flex items-center justify-end">
               <div className="text-right">
                 <h3 className="font-bold text-lg mb-4">Abmelden</h3>
                 <button 
@@ -485,7 +490,7 @@ export default function Dashboard() {
                   <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
                     <MessageSquare size={20} />
                   </div>
-                  <h3 className="font-bold">Support Chat</h3>
+                  <h3 className="font-bold">Persönlicher Ansprechpartner</h3>
                 </div>
                 
                 <div className="flex-1 overflow-y-auto space-y-4 mb-6 no-scrollbar">
@@ -525,9 +530,6 @@ export default function Dashboard() {
                     </div>
                     <h3 className="font-bold">Assets</h3>
                   </div>
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    <Plus size={20} />
-                  </Button>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
