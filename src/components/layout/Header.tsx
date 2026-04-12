@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
-import { Menu, X, Sparkles, Rocket, Cpu, Mountain } from "lucide-react";
+import { Menu, X, Sparkles, Rocket, Cpu, Mountain, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { auth } from "../../lib/firebase";
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -29,7 +31,9 @@ export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [buzzwordIndex, setBuzzwordIndex] = useState(0);
+  const [user, setUser] = useState<User | null>(null);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -39,11 +43,21 @@ export default function Header() {
       setBuzzwordIndex((prev) => (prev + 1) % buzzwords.length);
     }, 3000);
 
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+
     return () => {
       window.removeEventListener("scroll", handleScroll);
       clearInterval(interval);
+      unsubscribe();
     };
   }, []);
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate("/");
+  };
 
   const isAIPage = location.pathname === "/ki-integration";
 
@@ -160,6 +174,15 @@ export default function Header() {
             <Button nativeButton={false} render={<Link to="/kontakt" />} className={`rounded-full px-6 font-bold ${isAIPage ? 'bg-primary purple-glow' : ''}`}>
               Projekt starten
             </Button>
+            {user ? (
+              <Button onClick={handleLogout} variant="outline" className={`rounded-full px-6 font-bold flex items-center gap-2 ${isAIPage ? 'border-primary/30' : ''}`}>
+                <LogOut size={18} /> Logout
+              </Button>
+            ) : (
+              <Button nativeButton={false} render={<Link to="/login" />} variant="outline" className={`rounded-full px-6 font-bold ${isAIPage ? 'border-primary/30' : ''}`}>
+                Kunden Login
+              </Button>
+            )}
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -198,16 +221,27 @@ export default function Header() {
                 { label: "Warum wir", href: "/warum-wir" },
                 { label: "Potenzial-Check", href: "/selbstcheck" },
                 { label: "AI Integration", href: "/ki-integration", special: true },
+                ...(user ? [{ label: "Logout", href: "#", onClick: handleLogout }] : [{ label: "Kunden Login", href: "/login" }]),
                 { label: "Kontakt", href: "/kontakt" },
               ].map((item) => (
-                <Link
-                  key={item.label}
-                  to={item.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={`text-3xl font-black tracking-tight ${item.special ? 'text-primary' : ''}`}
-                >
-                  {item.label}
-                </Link>
+                item.onClick ? (
+                  <button
+                    key={item.label}
+                    onClick={() => { item.onClick!(); setIsMobileMenuOpen(false); }}
+                    className="text-3xl font-black tracking-tight text-left"
+                  >
+                    {item.label}
+                  </button>
+                ) : (
+                  <Link
+                    key={item.label}
+                    to={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`text-3xl font-black tracking-tight ${item.special ? 'text-primary' : ''}`}
+                  >
+                    {item.label}
+                  </Link>
+                )
               ))}
             </nav>
 

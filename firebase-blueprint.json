@@ -1,0 +1,40 @@
+{
+  "entities": {
+    "users": {
+      "title": "User",
+      "description": "User profile and project information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "description": "User's full name" },
+        "role": { "type": "string", "enum": ["admin", "client"], "description": "User role" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "projects": {
+      "title": "Project",
+      "description": "Customer project details",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Project title" },
+        "status": { "type": "string", "enum": ["planning", "in-progress", "review", "completed"], "description": "Project status" },
+        "ownerUid": { "type": "string", "description": "UID of the client who owns this project" },
+        "description": { "type": "string", "description": "Project description" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp" }
+      },
+      "required": ["title", "status", "ownerUid"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "users",
+      "description": "User profile documents"
+    },
+    "/projects/{projectId}": {
+      "schema": "projects",
+      "description": "Project tracking documents"
+    }
+  }
+}

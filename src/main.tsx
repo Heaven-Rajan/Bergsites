@@ -20,6 +20,7 @@ import References from './pages/References';
 import Pricing from './pages/Pricing';
 import FAQ from './pages/FAQ';
 import Contact from './pages/Contact';
+import Login from './pages/Login';
 import Legal from './pages/Legal';
 import Privacy from './pages/Privacy';
 import Selbstcheck from './pages/Selbstcheck';
@@ -58,6 +59,7 @@ function App() {
             <Route path="/preise" element={<Pricing />} />
             <Route path="/faq" element={<FAQ />} />
             <Route path="/kontakt" element={<Contact />} />
+            <Route path="/login" element={<Login />} />
             <Route path="/selbstcheck" element={<Selbstcheck />} />
             <Route path="/impressum" element={<Legal />} />
             <Route path="/datenschutz" element={<Privacy />} />
