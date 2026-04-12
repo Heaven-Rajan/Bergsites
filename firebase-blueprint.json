@@ -22,9 +22,69 @@
         "status": { "type": "string", "enum": ["planning", "in-progress", "review", "completed"], "description": "Project status" },
         "ownerUid": { "type": "string", "description": "UID of the client who owns this project" },
         "description": { "type": "string", "description": "Project description" },
+        "steps": { 
+          "type": "array", 
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": { "type": "string" },
+              "completed": { "type": "boolean" },
+              "active": { "type": "boolean" }
+            }
+          }
+        },
         "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp" }
       },
       "required": ["title", "status", "ownerUid"]
+    },
+    "documents": {
+      "title": "Document",
+      "description": "Invoices, contracts, etc.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "url": { "type": "string" },
+        "type": { "type": "string", "enum": ["invoice", "contract", "report"] },
+        "ownerUid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "url", "type", "ownerUid"]
+    },
+    "assets": {
+      "title": "Asset",
+      "description": "Project assets like logos, images",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "url": { "type": "string" },
+        "category": { "type": "string" },
+        "ownerUid": { "type": "string" }
+      },
+      "required": ["name", "url", "ownerUid"]
+    },
+    "messages": {
+      "title": "Message",
+      "description": "Chat messages between client and admin",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "senderUid": { "type": "string" },
+        "receiverUid": { "type": "string" },
+        "chatId": { "type": "string", "description": "The UID of the client this chat belongs to" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["text", "senderUid", "receiverUid", "chatId"]
+    },
+    "faqs": {
+      "title": "FAQ",
+      "description": "Frequently asked questions",
+      "type": "object",
+      "properties": {
+        "question": { "type": "string" },
+        "answer": { "type": "string" },
+        "category": { "type": "string" }
+      },
+      "required": ["question", "answer"]
     }
   },
   "firestore": {
@@ -35,6 +95,22 @@
     "/projects/{projectId}": {
       "schema": "projects",
       "description": "Project tracking documents"
+    },
+    "/documents/{docId}": {
+      "schema": "documents",
+      "description": "Client documents"
+    },
+    "/assets/{assetId}": {
+      "schema": "assets",
+      "description": "Client assets"
+    },
+    "/messages/{msgId}": {
+      "schema": "messages",
+      "description": "Chat messages"
+    },
+    "/faqs/{faqId}": {
+      "schema": "faqs",
+      "description": "Global FAQs"
     }
   }
 }

@@ -20,7 +20,7 @@ export default function Login() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      navigate("/"); // Redirect to home or dashboard after login
+      navigate("/dashboard");
     } catch (err: any) {
       console.error("Login Error:", err);
       if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {

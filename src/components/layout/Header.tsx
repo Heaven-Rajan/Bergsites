@@ -170,20 +170,25 @@ export default function Header() {
             </NavigationMenu>
           </nav>
 
-          <div className="hidden lg:flex items-center gap-4">
-            <Button nativeButton={false} render={<Link to="/kontakt" />} className={`rounded-full px-6 font-bold ${isAIPage ? 'bg-primary purple-glow' : ''}`}>
-              Projekt starten
-            </Button>
             {user ? (
-              <Button onClick={handleLogout} variant="outline" className={`rounded-full px-6 font-bold flex items-center gap-2 ${isAIPage ? 'border-primary/30' : ''}`}>
-                <LogOut size={18} /> Logout
-              </Button>
+              <div className="flex items-center gap-4">
+                <Button nativeButton={false} render={<Link to="/dashboard" />} className={`rounded-full px-6 font-bold ${isAIPage ? 'bg-primary purple-glow' : ''}`}>
+                  Dashboard
+                </Button>
+                <Button onClick={handleLogout} variant="outline" className={`rounded-full px-6 font-bold flex items-center gap-2 ${isAIPage ? 'border-primary/30' : ''}`}>
+                  <LogOut size={18} /> Logout
+                </Button>
+              </div>
             ) : (
-              <Button nativeButton={false} render={<Link to="/login" />} variant="outline" className={`rounded-full px-6 font-bold ${isAIPage ? 'border-primary/30' : ''}`}>
-                Kunden Login
-              </Button>
+              <div className="flex items-center gap-4">
+                <Button nativeButton={false} render={<Link to="/kontakt" />} className={`rounded-full px-6 font-bold ${isAIPage ? 'bg-primary purple-glow' : ''}`}>
+                  Projekt starten
+                </Button>
+                <Button nativeButton={false} render={<Link to="/login" />} variant="outline" className={`rounded-full px-6 font-bold ${isAIPage ? 'border-primary/30' : ''}`}>
+                  Kunden Login
+                </Button>
+              </div>
             )}
-          </div>
 
           {/* Mobile Menu Toggle */}
           <button className="lg:hidden p-2" onClick={() => setIsMobileMenuOpen(true)}>
@@ -221,7 +226,12 @@ export default function Header() {
                 { label: "Warum wir", href: "/warum-wir" },
                 { label: "Potenzial-Check", href: "/selbstcheck" },
                 { label: "AI Integration", href: "/ki-integration", special: true },
-                ...(user ? [{ label: "Logout", href: "#", onClick: handleLogout }] : [{ label: "Kunden Login", href: "/login" }]),
+                ...(user ? [
+                  { label: "Dashboard", href: "/dashboard" },
+                  { label: "Logout", href: "#", onClick: handleLogout }
+                ] : [
+                  { label: "Kunden Login", href: "/login" }
+                ]),
                 { label: "Kontakt", href: "/kontakt" },
               ].map((item) => (
                 item.onClick ? (

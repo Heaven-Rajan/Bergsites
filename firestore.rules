@@ -26,6 +26,41 @@ service cloud.firestore {
     //
     // ===============================================================
 
+    // Collection: documents
+    // Document ID: {docId}
+    // Fields:
+    //   - title: string (required)
+    //   - url: string (required)
+    //   - type: string (required, enum: ['invoice', 'contract', 'report'])
+    //   - ownerUid: string (required)
+    //   - createdAt: timestamp (optional)
+    //
+    // Collection: assets
+    // Document ID: {assetId}
+    // Fields:
+    //   - name: string (required)
+    //   - url: string (required)
+    //   - category: string (optional)
+    //   - ownerUid: string (required)
+    //
+    // Collection: messages
+    // Document ID: {msgId}
+    // Fields:
+    //   - text: string (required)
+    //   - senderUid: string (required)
+    //   - receiverUid: string (required)
+    //   - chatId: string (required) - UID of the client
+    //   - createdAt: timestamp (optional)
+    //
+    // Collection: faqs
+    // Document ID: {faqId}
+    // Fields:
+    //   - question: string (required)
+    //   - answer: string (required)
+    //   - category: string (optional)
+    //
+    // ===============================================================
+
     // ===============================================================
     // Helper Functions
     // ===============================================================
@@ -48,6 +83,10 @@ service cloud.firestore {
       return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     }
 
+    function isValidUrl(url) {
+      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
+    }
+
     // ===============================================================
     // Domain Validators
     // ===============================================================
@@ -68,6 +107,35 @@ service cloud.firestore {
              data.ownerUid is string && data.ownerUid.size() < 128;
     }
 
+    function isValidDocument(data) {
+      return data.keys().hasAll(['title', 'url', 'type', 'ownerUid']) &&
+             data.title is string && data.title.size() < 200 &&
+             isValidUrl(data.url) &&
+             data.type in ['invoice', 'contract', 'report'] &&
+             data.ownerUid is string;
+    }
+
+    function isValidAsset(data) {
+      return data.keys().hasAll(['name', 'url', 'ownerUid']) &&
+             data.name is string && data.name.size() < 200 &&
+             isValidUrl(data.url) &&
+             data.ownerUid is string;
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['text', 'senderUid', 'receiverUid', 'chatId']) &&
+             data.text is string && data.text.size() < 2000 &&
+             data.senderUid == request.auth.uid &&
+             data.chatId is string &&
+             (data.chatId == request.auth.uid || isAdmin());
+    }
+
+    function isValidFAQ(data) {
+      return data.keys().hasAll(['question', 'answer']) &&
+             data.question is string && data.question.size() < 500 &&
+             data.answer is string && data.answer.size() < 5000;
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -83,6 +151,26 @@ service cloud.firestore {
       allow create: if isAdmin() && isValidProject(request.resource.data);
       allow update: if (isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.ownerUid)) && isValidProject(request.resource.data);
       allow delete: if isAdmin();
+    }
+
+    match /documents/{docId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.ownerUid || isAdmin());
+      allow write: if isAdmin() && isValidDocument(request.resource.data);
+    }
+
+    match /assets/{assetId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.ownerUid || isAdmin());
+      allow write: if isAdmin() && isValidAsset(request.resource.data);
+    }
+
+    match /messages/{msgId} {
+      allow read: if isAuthenticated() && (resource.data.chatId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidMessage(request.resource.data);
+    }
+
+    match /faqs/{faqId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidFAQ(request.resource.data);
     }
   }
 }
