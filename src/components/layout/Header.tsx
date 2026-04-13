@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Menu, X, Sparkles, Rocket, Cpu, Mountain, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { auth } from "../../lib/firebase";
+import { isAdminEmail } from "../../lib/admin";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import {
   NavigationMenu,
@@ -172,7 +173,7 @@ export default function Header() {
 
             {user ? (
               <div className="flex items-center gap-4">
-                {user.email === 'galaxiegameri@gmail.com' && (
+                {isAdminEmail(user.email) && (
                   <Button nativeButton={false} render={<Link to="/admindashboard" />} variant="outline" className="rounded-full px-6 font-bold border-primary/30 text-primary">
                     Admin
                   </Button>

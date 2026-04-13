@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, 
@@ -16,28 +16,30 @@ import {
   Upload,
   Lock
 } from 'lucide-react';
-import { 
-  collection, 
-  query, 
-  where, 
-  onSnapshot, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
   getDoc,
   setDoc,
   serverTimestamp,
   orderBy,
   getDocs
 } from 'firebase/firestore';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { db, auth } from '../lib/firebase';
+import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { db, auth, storage } from '../lib/firebase';
+import { isAdminEmail } from '../lib/admin';
 import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 
 interface ProjectStep {
   label: string;
+  description?: string;
   status: 'not-started' | 'in-progress' | 'completed';
 }
 
@@ -96,57 +98,21 @@ const AdminDashboard = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
-  const [adminEmail, setAdminEmail] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [uploadType, setUploadType] = useState<'asset' | 'document' | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [stepDrafts, setStepDrafts] = useState<Record<string, ProjectStep[]>>({});
 
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
       setCurrentUser(user);
-      if (user) {
-        // Check for specific admin emails
-        const isHardcodedAdmin = user.email === 'galaxiegameri@gmail.com' || user.email === 'admin@bergsites.com';
-        
-        if (isHardcodedAdmin) {
-          setIsAdminUser(true);
-        } else {
-          // Check Firestore for role
-          try {
-            const userDoc = await getDoc(doc(db, 'users', user.uid));
-            if (userDoc.exists() && userDoc.data().role === 'admin') {
-              setIsAdminUser(true);
-            } else {
-              setIsAdminUser(false);
-            }
-          } catch (e) {
-            setIsAdminUser(false);
-          }
-        }
-      } else {
-        setIsAdminUser(false);
-      }
+      setIsAdminUser(isAdminEmail(user?.email));
       setAuthLoading(false);
     });
     return () => unsubscribe();
-  }, [navigate]);
-
-  const handleAdminLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoggingIn(true);
-    setLoginError(null);
-    try {
-      await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
-      // Auth state listener will handle the rest
-    } catch (err: any) {
-      console.error("Admin Login Error:", err);
-      setLoginError("Login fehlgeschlagen. Bitte Daten prüfen.");
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
+  }, []);
 
   // Fetch projects for selected user
   useEffect(() => {
@@ -265,78 +231,162 @@ const AdminDashboard = () => {
 
   const createProject = async () => {
     if (!selectedUser || !newProjectTitle) return;
+    if (!selectedUser.uid) {
+      alert('Dieser Kunde hat keine gültige UID. Bitte suche per UID, nicht per E-Mail, solange der Kunde noch kein Firestore-Doc hat.');
+      return;
+    }
 
     const steps: ProjectStep[] = Array.from({ length: newProjectStepsCount }, (_, i) => ({
       label: `Schritt ${i + 1}`,
+      description: '',
       status: 'not-started'
     }));
 
-    await addDoc(collection(db, 'projects'), {
-      title: newProjectTitle,
-      status: 'In Planung',
-      description: 'Neues Projekt erstellt',
-      ownerUid: selectedUser.uid,
-      steps,
-      updatedAt: serverTimestamp()
-    });
+    try {
+      await addDoc(collection(db, 'projects'), {
+        title: newProjectTitle,
+        status: 'In Bearbeitung',
+        description: 'Neues Projekt erstellt',
+        ownerUid: selectedUser.uid,
+        steps,
+        updatedAt: serverTimestamp()
+      });
+      setNewProjectTitle('');
+      setIsMilestoneCreatorOpen(false);
+    } catch (err) {
+      console.error('createProject error:', err);
+      alert('Projekt konnte nicht erstellt werden: ' + (err instanceof Error ? err.message : String(err)));
+    }
+  };
 
-    setNewProjectTitle('');
-    setIsMilestoneCreatorOpen(false);
+  const getEffectiveSteps = (project: Project): ProjectStep[] =>
+    stepDrafts[project.id] ?? project.steps;
+
+  const updateStepDraft = (projectId: string, stepIndex: number, patch: Partial<ProjectStep>) => {
+    setStepDrafts(prev => {
+      const project = projects.find(p => p.id === projectId);
+      if (!project) return prev;
+      const base = prev[projectId] ?? project.steps.map(s => ({ ...s }));
+      const next = base.map((s, i) => i === stepIndex ? { ...s, ...patch } : s);
+      return { ...prev, [projectId]: next };
+    });
+  };
+
+  const commitSteps = async (projectId: string, override?: ProjectStep[]) => {
+    const steps = override ?? stepDrafts[projectId];
+    if (!steps) return;
+    try {
+      await updateDoc(doc(db, 'projects', projectId), {
+        steps,
+        updatedAt: serverTimestamp()
+      });
+      setStepDrafts(prev => {
+        const next = { ...prev };
+        delete next[projectId];
+        return next;
+      });
+    } catch (err) {
+      console.error('commit steps error:', err);
+      alert('Änderung konnte nicht gespeichert werden: ' + (err instanceof Error ? err.message : String(err)));
+    }
   };
 
   const updateStepStatus = async (projectId: string, stepIndex: number, newStatus: ProjectStep['status']) => {
     const project = projects.find(p => p.id === projectId);
     if (!project) return;
-
-    const newSteps = [...project.steps];
-    newSteps[stepIndex].status = newStatus;
-
-    await updateDoc(doc(db, 'projects', projectId), {
-      steps: newSteps,
-      updatedAt: serverTimestamp()
-    });
+    const base = getEffectiveSteps(project);
+    const newSteps = base.map((s, i) => i === stepIndex ? { ...s, status: newStatus } : s);
+    await commitSteps(projectId, newSteps);
   };
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedUser || !auth.currentUser) return;
 
-    await addDoc(collection(db, 'messages'), {
-      text: newMessage,
-      senderUid: auth.currentUser.uid,
-      receiverUid: selectedUser.uid,
-      chatId: selectedUser.uid,
-      createdAt: serverTimestamp()
-    });
-
-    setNewMessage('');
-  };
-
-  const deleteItem = async (col: string, id: string) => {
-    if (confirm('Wirklich löschen?')) {
-      await deleteDoc(doc(db, col, id));
+    try {
+      await addDoc(collection(db, 'messages'), {
+        text: newMessage,
+        senderUid: auth.currentUser.uid,
+        receiverUid: selectedUser.uid,
+        chatId: selectedUser.uid,
+        createdAt: serverTimestamp()
+      });
+      setNewMessage('');
+    } catch (err) {
+      console.error('sendMessage error:', err);
+      alert('Nachricht konnte nicht gesendet werden: ' + (err instanceof Error ? err.message : String(err)));
     }
   };
 
-  const uploadMockFile = async (type: 'asset' | 'document') => {
-    if (!selectedUser) return;
-    
-    const name = prompt(`Name für ${type === 'asset' ? 'Asset' : 'Rechnung'}:`);
-    if (!name) return;
+  const deleteItem = async (col: string, id: string) => {
+    if (!confirm('Wirklich löschen?')) return;
+    try {
+      const item = col === 'assets'
+        ? assets.find(a => a.id === id)
+        : col === 'documents'
+          ? documents.find(d => d.id === id)
+          : null;
+      await deleteDoc(doc(db, col, id));
+      if (item && 'url' in item && item.url && item.url.includes('firebasestorage.googleapis.com')) {
+        try {
+          await deleteObject(storageRef(storage, item.url));
+        } catch (e) {
+          console.warn('Storage file could not be deleted (maybe already gone):', e);
+        }
+      }
+    } catch (err) {
+      console.error('delete error:', err);
+      alert('Löschen fehlgeschlagen: ' + (err instanceof Error ? err.message : String(err)));
+    }
+  };
 
-    if (type === 'asset') {
-      await addDoc(collection(db, 'assets'), {
-        name,
-        url: `https://picsum.photos/seed/${name}/800/600`,
-        ownerUid: selectedUser.uid
-      });
-    } else {
-      await addDoc(collection(db, 'documents'), {
-        title: name,
-        url: '#',
-        type: 'invoice',
-        ownerUid: selectedUser.uid,
-        createdAt: serverTimestamp()
-      });
+  const openFilePicker = (type: 'asset' | 'document') => {
+    if (!selectedUser?.uid) {
+      alert('Bitte zuerst einen Kunden mit gültiger UID auswählen.');
+      return;
+    }
+    setUploadType(type);
+    // Trigger click on next tick so the input's accept attribute re-renders first.
+    setTimeout(() => fileInputRef.current?.click(), 0);
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const type = uploadType;
+    e.target.value = '';
+    if (!file || !type || !selectedUser?.uid) {
+      setUploadType(null);
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const safeName = file.name.replace(/[^\w.\-]/g, '_');
+      const path = `users/${selectedUser.uid}/${type === 'asset' ? 'assets' : 'documents'}/${Date.now()}_${safeName}`;
+      const sRef = storageRef(storage, path);
+      await uploadBytes(sRef, file, { contentType: file.type || undefined });
+      const url = await getDownloadURL(sRef);
+
+      if (type === 'asset') {
+        await addDoc(collection(db, 'assets'), {
+          name: file.name,
+          url,
+          ownerUid: selectedUser.uid
+        });
+      } else {
+        await addDoc(collection(db, 'documents'), {
+          title: file.name,
+          url,
+          type: 'invoice',
+          ownerUid: selectedUser.uid,
+          createdAt: serverTimestamp()
+        });
+      }
+    } catch (err) {
+      console.error('upload error:', err);
+      alert('Upload fehlgeschlagen: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setIsUploading(false);
+      setUploadType(null);
     }
   };
 
@@ -352,76 +402,36 @@ const AdminDashboard = () => {
     );
   }
 
+  if (!currentUser) {
+    return <Navigate to="/login" replace state={{ from: '/admindashboard' }} />;
+  }
+
   if (!isAdminUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f8f9fa] p-6">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl border border-[#e9ecef] p-10"
+          className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl border border-[#e9ecef] p-10 text-center"
         >
-          <div className="text-center mb-10">
-            <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg rotate-3">
-              <Lock className="text-white" size={32} />
-            </div>
-            <h1 className="text-3xl font-black tracking-tighter mb-2 uppercase">Admin Login</h1>
-            <p className="text-muted-foreground">Bergsites Management Panel</p>
+          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg rotate-3">
+            <Lock className="text-white" size={32} />
           </div>
-
-          {currentUser && !isAdminUser && (
-            <div className="mb-6 p-4 bg-amber-50 border border-amber-100 text-amber-700 rounded-2xl text-sm font-medium">
-              Angemeldet als {currentUser.email}, aber kein Admin-Zugriff.
-            </div>
-          )}
-
-          {loginError && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-sm font-medium">
-              {loginError}
-            </div>
-          )}
-
-          <form onSubmit={handleAdminLogin} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">E-Mail</label>
-              <input 
-                type="email" 
-                required
-                value={adminEmail}
-                onChange={(e) => setAdminEmail(e.target.value)}
-                placeholder="admin@bergsites.com"
-                className="w-full h-14 px-6 rounded-2xl bg-[#f8f9fa] border-2 border-transparent focus:border-primary outline-none transition-all font-medium"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Passwort</label>
-              <input 
-                type="password" 
-                required
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full h-14 px-6 rounded-2xl bg-[#f8f9fa] border-2 border-transparent focus:border-primary outline-none transition-all font-medium"
-              />
-            </div>
-
-            <Button 
-              type="submit" 
-              disabled={isLoggingIn}
-              className="w-full h-14 rounded-2xl text-lg font-bold shadow-lg shadow-primary/20"
-            >
-              {isLoggingIn ? "Wird geladen..." : "Einloggen"}
+          <h1 className="text-3xl font-black tracking-tighter mb-2 uppercase">Kein Zugriff</h1>
+          <p className="text-muted-foreground mb-8">
+            Angemeldet als <span className="font-bold">{currentUser.email}</span>. Dieser Account hat keine Admin-Rechte.
+          </p>
+          <div className="flex flex-col gap-3">
+            <Button onClick={() => navigate('/dashboard')} className="w-full h-14 rounded-2xl text-lg font-bold shadow-lg shadow-primary/20">
+              Zum Kunden-Dashboard
             </Button>
-          </form>
-
-          {currentUser && (
-            <button 
-              onClick={() => auth.signOut()}
-              className="w-full mt-6 text-sm font-bold text-muted-foreground hover:text-primary transition-colors"
+            <button
+              onClick={async () => { await auth.signOut(); navigate('/login'); }}
+              className="w-full text-sm font-bold text-muted-foreground hover:text-primary transition-colors"
             >
-              Abmelden
+              Abmelden und neu einloggen
             </button>
-          )}
+          </div>
         </motion.div>
       </div>
     );
@@ -429,6 +439,25 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] text-[#343a40] font-sans p-8">
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        accept={uploadType === 'asset' ? 'image/*,video/*' : 'application/pdf,image/*'}
+        onChange={handleFileSelected}
+      />
+      {isUploading && (
+        <div className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center">
+          <div className="bg-white rounded-3xl p-8 flex flex-col items-center gap-4 shadow-2xl">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full"
+            />
+            <p className="font-bold text-sm">Datei wird hochgeladen...</p>
+          </div>
+        </div>
+      )}
       {/* Top Header */}
       <div className="flex justify-between items-center mb-12">
         <div>
@@ -473,14 +502,14 @@ const AdminDashboard = () => {
                   <FolderOpen size={20} className="text-primary" />
                   <h3 className="font-bold">Assets</h3>
                 </div>
-                <Button variant="ghost" size="icon" className="rounded-full" onClick={() => uploadMockFile('asset')}>
+                <Button variant="ghost" size="icon" className="rounded-full" disabled={isUploading} onClick={() => openFilePicker('asset')}>
                   <Plus size={20} />
                 </Button>
               </div>
               <div className="space-y-3">
                 {assets.map(asset => (
                   <div key={asset.id} className="flex items-center justify-between p-3 bg-[#f8f9fa] rounded-xl group">
-                    <span className="text-sm font-medium truncate max-w-[150px]">{asset.name}</span>
+                    <a href={asset.url} target="_blank" rel="noreferrer" className="text-sm font-medium truncate max-w-[150px] hover:text-primary">{asset.name}</a>
                     <button onClick={() => deleteItem('assets', asset.id)} className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Trash2 size={16} />
                     </button>
@@ -497,14 +526,14 @@ const AdminDashboard = () => {
                   <FileText size={20} className="text-primary" />
                   <h3 className="font-bold">Rechnungen</h3>
                 </div>
-                <Button variant="ghost" size="icon" className="rounded-full" onClick={() => uploadMockFile('document')}>
+                <Button variant="ghost" size="icon" className="rounded-full" disabled={isUploading} onClick={() => openFilePicker('document')}>
                   <Plus size={20} />
                 </Button>
               </div>
               <div className="space-y-3">
                 {documents.map(doc => (
                   <div key={doc.id} className="flex items-center justify-between p-3 bg-[#f8f9fa] rounded-xl group">
-                    <span className="text-sm font-medium truncate max-w-[150px]">{doc.title}</span>
+                    <a href={doc.url} target="_blank" rel="noreferrer" className="text-sm font-medium truncate max-w-[150px] hover:text-primary">{doc.title}</a>
                     <button onClick={() => deleteItem('documents', doc.id)} className="text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Trash2 size={16} />
                     </button>
@@ -599,23 +628,43 @@ const AdminDashboard = () => {
                     </div>
                     
                     <div className="space-y-4">
-                      {project.steps.map((step, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-2xl border border-[#e9ecef]">
-                          <span className="text-sm font-bold">{step.label}</span>
-                          <div className="flex gap-2">
-                            <button 
-                              onClick={() => updateStepStatus(project.id, idx, 'not-started')}
-                              className={`w-6 h-6 rounded-full border-2 ${step.status === 'not-started' ? 'bg-red-500 border-red-500' : 'border-red-200'}`}
+                      {getEffectiveSteps(project).map((step, idx) => (
+                        <div key={idx} className="p-4 bg-white rounded-2xl border border-[#e9ecef] space-y-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <input
+                              type="text"
+                              value={step.label}
+                              onChange={(e) => updateStepDraft(project.id, idx, { label: e.target.value })}
+                              onBlur={() => commitSteps(project.id)}
+                              placeholder={`Schritt ${idx + 1}`}
+                              className="flex-1 text-sm font-bold bg-transparent outline-none focus:bg-[#f8f9fa] focus:px-3 focus:py-2 focus:rounded-lg transition-all"
                             />
-                            <button 
-                              onClick={() => updateStepStatus(project.id, idx, 'in-progress')}
-                              className={`w-6 h-6 rounded-full border-2 ${step.status === 'in-progress' ? 'bg-yellow-500 border-yellow-500' : 'border-yellow-200'}`}
-                            />
-                            <button 
-                              onClick={() => updateStepStatus(project.id, idx, 'completed')}
-                              className={`w-6 h-6 rounded-full border-2 ${step.status === 'completed' ? 'bg-green-500 border-green-500' : 'border-green-200'}`}
-                            />
+                            <div className="flex gap-2 shrink-0">
+                              <button
+                                onClick={() => updateStepStatus(project.id, idx, 'not-started')}
+                                title="Offen"
+                                className={`w-6 h-6 rounded-full border-2 ${step.status === 'not-started' ? 'bg-red-500 border-red-500' : 'border-red-200'}`}
+                              />
+                              <button
+                                onClick={() => updateStepStatus(project.id, idx, 'in-progress')}
+                                title="In Arbeit"
+                                className={`w-6 h-6 rounded-full border-2 ${step.status === 'in-progress' ? 'bg-yellow-500 border-yellow-500' : 'border-yellow-200'}`}
+                              />
+                              <button
+                                onClick={() => updateStepStatus(project.id, idx, 'completed')}
+                                title="Abgeschlossen"
+                                className={`w-6 h-6 rounded-full border-2 ${step.status === 'completed' ? 'bg-green-500 border-green-500' : 'border-green-200'}`}
+                              />
+                            </div>
                           </div>
+                          <textarea
+                            value={step.description ?? ''}
+                            onChange={(e) => updateStepDraft(project.id, idx, { description: e.target.value })}
+                            onBlur={() => commitSteps(project.id)}
+                            placeholder="Details für den Kunden (z.B. was gerade gemacht wird)..."
+                            rows={2}
+                            className="w-full text-xs text-muted-foreground bg-[#f8f9fa] rounded-lg px-3 py-2 resize-none outline-none focus:ring-2 focus:ring-primary/30"
+                          />
                         </div>
                       ))}
                     </div>

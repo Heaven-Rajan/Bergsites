@@ -1,0 +1,14 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAdmin() {
+      return request.auth != null &&
+             request.auth.token.email in ["galaxiegameri@gmail.com", "admin@bergsites.com"];
+    }
+
+    match /users/{userId}/{allPaths=**} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin() && request.resource.size < 25 * 1024 * 1024;
+    }
+  }
+}

@@ -79,6 +79,7 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 
 interface ProjectStep {
   label: string;
+  description?: string;
   status: 'not-started' | 'in-progress' | 'completed';
 }
 
@@ -88,6 +89,7 @@ interface Project {
   status: string;
   description: string;
   steps: ProjectStep[];
+  ownerUid?: string;
 }
 
 interface AppDocument {
@@ -232,8 +234,13 @@ export default function Dashboard() {
   }
 
   const activeProject = projects[0];
-  const activeStepIdx = activeProject?.steps?.findIndex(s => s.active) ?? -1;
-  const progress = activeProject?.steps ? ((activeStepIdx + 1) / activeProject.steps.length) * 100 : 0;
+  const projectSteps: ProjectStep[] = activeProject?.steps ?? [];
+  const completedCount = projectSteps.filter(s => s.status === 'completed').length;
+  const inProgressCount = projectSteps.filter(s => s.status === 'in-progress').length;
+  const progress = projectSteps.length > 0
+    ? Math.round(((completedCount + 0.5 * inProgressCount) / projectSteps.length) * 100)
+    : 0;
+  const activeStep = projectSteps.find(s => s.status === 'in-progress');
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] text-[#1a1a1a] font-sans selection:bg-primary/20">
@@ -281,16 +288,40 @@ export default function Dashboard() {
                 className="bg-[#343a40] text-white rounded-[2.5rem] p-10 shadow-2xl shadow-black/10 relative overflow-hidden"
               >
                 <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-8">
-                    <h2 className="text-xl font-bold">Meilenstein Status</h2>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xs font-black uppercase tracking-widest text-white/40">Meilenstein Status</span>
                     <span className="text-xs font-black uppercase tracking-widest text-white/40 bg-white/5 px-3 py-1 rounded-full border border-white/10">
                       Projekt ID: {activeProject?.id.slice(0, 8) || "---"}
                     </span>
                   </div>
-                  
-                  <p className="text-lg text-white/80 leading-relaxed mb-12 max-w-md">
-                    {activeProject?.description || "Hier siehst du den aktuellen Fortschritt deines Projekts. Wir halten dich über jeden Schritt auf dem Laufenden."}
-                  </p>
+
+                  <h2 className="text-3xl md:text-4xl font-black tracking-tighter mb-6">
+                    {activeProject?.title || "Kein aktives Projekt"}
+                  </h2>
+
+                  {activeStep && (
+                    <div className="mb-10 p-5 bg-white/5 rounded-2xl border border-white/10 max-w-xl">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-yellow-500">
+                          Aktuell in Arbeit: {activeStep.label}
+                        </span>
+                      </div>
+                      {activeStep.description && (
+                        <p className="text-sm text-white/70 leading-relaxed">{activeStep.description}</p>
+                      )}
+                    </div>
+                  )}
+                  {!activeStep && activeProject?.description && (
+                    <p className="text-lg text-white/80 leading-relaxed mb-10 max-w-md">
+                      {activeProject.description}
+                    </p>
+                  )}
+                  {!activeProject && (
+                    <p className="text-lg text-white/80 leading-relaxed mb-10 max-w-md">
+                      Hier siehst du den aktuellen Fortschritt deines Projekts. Wir halten dich über jeden Schritt auf dem Laufenden.
+                    </p>
+                  )}
                   
                   {/* Overlapping Status Windows */}
                   <div className="relative mb-12 py-4">
@@ -314,16 +345,17 @@ export default function Dashboard() {
                           }
                         };
 
+                        const stepAny = step as ProjectStep;
                         return (
                           <div key={idx} className="relative flex flex-col items-center group">
                             {/* The Circle */}
-                            <motion.div 
+                            <motion.div
                               initial={false}
-                              animate={{ 
+                              animate={{
                                 scale: step.status === 'in-progress' ? 1.2 : 1,
                                 backgroundColor: getStatusColor(step.status)
                               }}
-                              className={`w-10 h-10 rounded-full border-4 border-[#343a40] flex items-center justify-center transition-all z-10 shadow-lg ${step.status === 'in-progress' ? 'ring-4 ring-yellow-500/30' : ''}`}
+                              className={`w-10 h-10 rounded-full border-4 border-[#343a40] flex items-center justify-center transition-all z-10 shadow-lg cursor-help ${step.status === 'in-progress' ? 'ring-4 ring-yellow-500/30' : ''}`}
                             >
                               {step.status === 'completed' ? (
                                 <CheckCircle2 size={18} className="text-white" />
@@ -333,7 +365,27 @@ export default function Dashboard() {
                                 </span>
                               )}
                             </motion.div>
-                            
+
+                            {/* Hover Tooltip */}
+                            <div className="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-30 w-56">
+                              <div className="bg-white text-[#343a40] rounded-2xl shadow-2xl border border-[#e9ecef] p-4">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <div
+                                    className="w-2 h-2 rounded-full shrink-0"
+                                    style={{ backgroundColor: getStatusColor(step.status) }}
+                                  />
+                                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                    {step.status === 'completed' ? 'Abgeschlossen' : step.status === 'in-progress' ? 'In Arbeit' : 'Offen'}
+                                  </span>
+                                </div>
+                                <div className="text-sm font-bold mb-1">{stepAny.label}</div>
+                                <div className="text-xs text-muted-foreground leading-relaxed">
+                                  {stepAny.description || 'Keine Details hinterlegt.'}
+                                </div>
+                              </div>
+                              <div className="w-3 h-3 bg-white border-r border-b border-[#e9ecef] rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1.5" />
+                            </div>
+
                             {/* The Label */}
                             <div className={`absolute -bottom-8 whitespace-nowrap text-[10px] font-black uppercase tracking-widest transition-colors ${step.status !== 'not-started' ? 'text-white' : 'text-white/40'}`}>
                               {step.label}

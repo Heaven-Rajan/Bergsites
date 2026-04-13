@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../lib/firebase";
+import { isAdminEmail } from "../lib/admin";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -19,8 +20,8 @@ export default function Login() {
     setError(null);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      navigate("/dashboard");
+      const { user } = await signInWithEmailAndPassword(auth, email, password);
+      navigate(isAdminEmail(user.email) ? "/admindashboard" : "/dashboard");
     } catch (err: any) {
       console.error("Login Error:", err);
       if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
