@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Lock, User, ArrowRight, Mountain, Loader2 } from "lucide-react";
+import { Lock, User, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -44,9 +44,12 @@ export default function Login() {
         className="w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl border border-muted p-10"
       >
         <div className="text-center mb-10">
-          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg rotate-3">
-            <Mountain className="text-white" size={32} />
-          </div>
+          <img
+            src="/bergsiteslogov1.png"
+            alt="Bergsites Logo"
+            className="w-16 h-16 rounded-2xl object-cover mx-auto mb-6 shadow-lg rotate-3"
+          />
+
           <h1 className="text-3xl font-display font-black tracking-tighter mb-2">Kunden Login</h1>
           <p className="text-muted-foreground">Willkommen zurück im Bergsites Portal.</p>
         </div>

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Mountain, Mail, MapPin, Phone, Instagram, Linkedin, Twitter } from "lucide-react";
+import { Mail, MapPin, Phone, Instagram, Linkedin, Twitter } from "lucide-react";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -9,9 +9,11 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
         <div className="space-y-6">
           <Link to="/" className="flex items-center gap-2">
-            <div className="bg-primary p-1.5 rounded-lg text-white">
-              <Mountain size={24} />
-            </div>
+            <img
+              src="/bergsiteslogov1.png"
+              alt="Bergsites Logo"
+              className="w-10 h-10 rounded-lg object-cover"
+            />
             <span className="font-display text-2xl font-bold tracking-tight">Bergsites</span>
           </Link>
           <p className="text-muted-foreground max-w-xs">
@@ -37,6 +39,7 @@ export default function Footer() {
             <li><Link to="/webentwicklung" className="hover:text-primary transition-colors">Webentwicklung</Link></li>
             <li><Link to="/automatisierung" className="hover:text-primary transition-colors">Automatisierung</Link></li>
             <li><Link to="/ki-integration" className="hover:text-primary transition-colors">KI-Integration</Link></li>
+            <li><Link to="/backend-systeme" className="hover:text-primary transition-colors">Backend-Systeme</Link></li>
             <li><Link to="/leistungen" className="hover:text-primary transition-colors">Website-Relaunch</Link></li>
             <li><Link to="/leistungen" className="hover:text-primary transition-colors">SEO & Performance</Link></li>
             <li><Link to="/leistungen" className="hover:text-primary transition-colors">Alle Leistungen</Link></li>
@@ -49,7 +52,6 @@ export default function Footer() {
             <li><Link to="/ueber-uns" className="hover:text-primary transition-colors">Über uns</Link></li>
             <li><Link to="/warum-wir" className="hover:text-primary transition-colors">Warum wir</Link></li>
             <li><Link to="/referenzen" className="hover:text-primary transition-colors">Referenzen</Link></li>
-            <li><Link to="/preise" className="hover:text-primary transition-colors">Preise</Link></li>
             <li><Link to="/faq" className="hover:text-primary transition-colors">FAQ</Link></li>
             <li><Link to="/selbstcheck" className="hover:text-primary transition-colors font-bold text-primary">Potenzial-Check</Link></li>
             <li><Link to="/kontakt" className="hover:text-primary transition-colors">Kontakt</Link></li>

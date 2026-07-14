@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
-import { Menu, X, Sparkles, Rocket, Cpu, Mountain, LogOut } from "lucide-react";
+import { Menu, X, Sparkles, Rocket, Cpu, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { auth } from "../../lib/firebase";
 import { isAdminEmail } from "../../lib/admin";
@@ -24,6 +24,7 @@ const services = [
   { title: "KI-Integration", href: "/ki-integration", desc: "AI, Chatbots & intelligente Systeme." },
   { title: "SEO & Performance", href: "/seo", desc: "Ladezeiten & Google Ranking." },
   { title: "Landingpages", href: "/landingpages", desc: "Conversion & Sales Fokus." },
+  { title: "Backend-Systeme", href: "/backend-systeme", desc: "Custom APIs, interne Tools & Datenbanken." },
 ];
 
 const buzzwords = ["AI Integration", "Process Automation", "Premium Webdesign", "Future-Proof Tech", "ROI Focused"];
@@ -83,9 +84,11 @@ export default function Header() {
       <div className={`transition-all duration-500 ${isScrolled ? (isAIPage ? "bg-background/80 backdrop-blur-xl border-b border-border py-3" : "bg-white/80 backdrop-blur-xl border-b border-muted py-3") : "py-6"}`}>
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 group">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:rotate-12 ${isAIPage ? 'bg-primary purple-glow' : 'bg-primary'}`}>
-              <Mountain className="text-white" size={24} />
-            </div>
+            <img
+              src="/bergsiteslogov1.png"
+              alt="Bergsites Logo"
+              className={`w-10 h-10 rounded-xl object-cover transition-all duration-500 group-hover:rotate-12 ${isAIPage ? 'purple-glow' : ''}`}
+            />
             <span className="font-display text-2xl font-black tracking-tighter">Bergsites</span>
           </Link>
 
@@ -215,9 +218,11 @@ export default function Header() {
           >
             <div className="flex items-center justify-between mb-12">
               <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2">
-                <div className="bg-primary p-1.5 rounded-lg text-white">
-                  <Mountain size={24} />
-                </div>
+                <img
+                  src="/bergsiteslogov1.png"
+                  alt="Bergsites Logo"
+                  className="w-10 h-10 rounded-lg object-cover"
+                />
                 <span className="font-display text-2xl font-black tracking-tighter">Bergsites</span>
               </Link>
               <button onClick={() => setIsMobileMenuOpen(false)} className="p-2">

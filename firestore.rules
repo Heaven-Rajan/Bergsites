@@ -75,7 +75,8 @@ service cloud.firestore {
     }
     
     function isAdmin() {
-      return isAuthenticated() && request.auth.token.email in ["galaxiegameri@gmail.com", "admin@bergsites.com"];
+      return isAuthenticated() &&
+             request.auth.token.email in ["galaxiegameri@gmail.com", "admin@bergsites.com"];
     }
 
     function isValidEmail(email) {
@@ -83,7 +84,7 @@ service cloud.firestore {
     }
 
     function isValidUrl(url) {
-      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
+      return url is string && url.matches("^https://.*");
     }
 
     // ===============================================================
@@ -141,13 +142,31 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      allow read, write: if isAdmin() || isOwner(userId);
+      allow read: if isAdmin() || isOwner(userId);
+
+      // Admin can create/update any user doc, as long as it's valid.
+      allow create, update: if isAdmin() && isValidUser(request.resource.data, userId);
+
+      // A client can create or update ONLY their own doc, and can never
+      // grant themselves an 'admin' role. If the doc exists, the role
+      // cannot change from what's already there unless an admin does it.
+      allow create: if isOwner(userId) &&
+                       isValidUser(request.resource.data, userId) &&
+                       request.resource.data.role == 'client';
+      allow update: if isOwner(userId) &&
+                       isValidUser(request.resource.data, userId) &&
+                       request.resource.data.role == resource.data.role;
+
+      // Only admin can delete user docs.
+      allow delete: if isAdmin();
     }
 
     match /projects/{projectId} {
       allow read: if isAuthenticated() && (request.auth.uid == resource.data.ownerUid || isAdmin());
+      // Only admin can create/update/delete projects. Clients must not be
+      // able to mark their own milestones as complete.
       allow create: if isAdmin() && isValidProject(request.resource.data);
-      allow update: if (isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.ownerUid)) && isValidProject(request.resource.data);
+      allow update: if isAdmin() && isValidProject(request.resource.data);
       allow delete: if isAdmin();
     }
 

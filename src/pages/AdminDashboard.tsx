@@ -81,7 +81,6 @@ interface Asset {
 }
 
 const AdminDashboard = () => {
-  console.log("AdminDashboard rendering...");
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -170,7 +169,6 @@ const AdminDashboard = () => {
     if (!searchQuery) return;
     
     try {
-      console.log("Searching for:", searchQuery, "as", auth.currentUser?.email);
       // 1. Try searching by email in 'users' collection
       const q = query(collection(db, 'users'), where('email', '==', searchQuery));
       const snapshot = await getDocs(q);

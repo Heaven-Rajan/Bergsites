@@ -15,7 +15,8 @@ import {
   Code2,
   RefreshCw,
   Workflow,
-  Target
+  Target,
+  Server
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -77,6 +78,13 @@ const allServices = [
     icon: <Target className="text-primary" />,
     href: "/landingpages",
     features: ["Sales Fokus", "Lead Generierung", "A/B Testing"]
+  },
+  {
+    title: "Backend-Systeme",
+    description: "Maßgeschneiderte Backend-Lösungen, interne Tools und Schnittstellen für Unternehmen.",
+    icon: <Server className="text-primary" />,
+    href: "/backend-systeme",
+    features: ["Custom APIs", "Interne Tools", "ERP/CRM-Integration"]
   }
 ];
 

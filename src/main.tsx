@@ -15,9 +15,9 @@ import WebsiteRelaunch from './pages/WebsiteRelaunch';
 import Maintenance from './pages/Maintenance';
 import SEOPerformance from './pages/SEOPerformance';
 import Landingpages from './pages/Landingpages';
+import BackendSystems from './pages/BackendSystems';
 import About from './pages/About';
 import References from './pages/References';
-import Pricing from './pages/Pricing';
 import FAQ from './pages/FAQ';
 import Contact from './pages/Contact';
 import Login from './pages/Login';
@@ -57,9 +57,9 @@ function App() {
           <Route path="/wartung" element={<Maintenance />} />
           <Route path="/seo" element={<SEOPerformance />} />
           <Route path="/landingpages" element={<Landingpages />} />
+          <Route path="/backend-systeme" element={<BackendSystems />} />
           <Route path="/ueber-uns" element={<About />} />
           <Route path="/referenzen" element={<References />} />
-          <Route path="/preise" element={<Pricing />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/kontakt" element={<Contact />} />
           <Route path="/login" element={<Login />} />

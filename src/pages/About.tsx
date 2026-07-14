@@ -1,18 +1,18 @@
 import { motion } from "motion/react";
-import { Mountain, Heart, Target, Users, MapPin, CheckCircle2 } from "lucide-react";
+import { Heart, Target, Users, MapPin, CheckCircle2 } from "lucide-react";
 
 export default function About() {
   return (
     <div className="pt-20">
       <section className="py-24 px-6 bg-muted">
         <div className="max-w-7xl mx-auto text-center">
-          <motion.div
+          <motion.img
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="inline-flex p-4 bg-primary rounded-3xl text-white mb-8"
-          >
-            <Mountain size={48} />
-          </motion.div>
+            src="/bergsiteslogov1.png"
+            alt="Bergsites Logo"
+            className="inline-block w-24 h-24 rounded-3xl object-cover mb-8 shadow-lg"
+          />
           <h1 className="text-5xl md:text-7xl font-bold mb-6">Wir sind <span className="text-primary">Bergsites</span></h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Digitale Exzellenz aus dem Herzen des Oberbergischen Kreises. Wir verbinden lokale Nähe mit globalem technischem Standard.
