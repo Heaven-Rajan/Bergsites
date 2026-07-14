@@ -1,20 +1,16 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Bergsites
 
-# Run and deploy your AI Studio app
+Premium Webdesign & Automatisierung — [heaven-rajan.github.io/Bergsites](https://heaven-rajan.github.io/Bergsites/)
 
-This contains everything you need to run your app locally.
+## Entwicklung
 
-View your app in AI Studio: https://ai.studio/apps/236c683b-27a4-4298-b1bd-3aa61efd0ae0
+**Voraussetzung:** Node.js
 
-## Run Locally
+```
+npm install
+npm run dev
+```
 
-**Prerequisites:**  Node.js
+## Deployment
 
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+Jeder Push auf `main` oder `master` baut die Seite automatisch über GitHub Actions und deployed sie auf GitHub Pages.
